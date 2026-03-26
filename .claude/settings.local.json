@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)"
+      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh --version)",
+      "Bash(gh auth:*)",
+      "Bash(gh api:*)"
     ]
   }
 }
