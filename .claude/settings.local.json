@@ -5,7 +5,9 @@
       "WebFetch(domain:github.com)",
       "Bash(gh --version)",
       "Bash(gh auth:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(curl -sL \"https://github.com/wherefindme/testOne/raw/80dc616ee80dd930760441deb5df76643030da2f/.claude%2Fsettings.local.json\")",
+      "Bash(gh pr:*)"
     ]
   }
 }
