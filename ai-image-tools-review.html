@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI文字生成图片工具评测 - 穹鸣AI文章</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Source+Sans+3:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --accent-cyan: #00d4ff;
+            --accent-magenta: #ff00aa;
+            --accent-gradient: linear-gradient(135deg, #00d4ff 0%, #ff00aa 100%);
+            --border-subtle: rgba(255,255,255,0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.7;
+        }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Gradient orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: var(--accent-cyan);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: var(--accent-magenta);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, 50px) scale(1.1); }
+            50% { transform: translate(0, 100px) scale(0.9); }
+            75% { transform: translate(-50px, 50px) scale(1.05); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 100px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-cyan);
+            letter-spacing: 0.1em;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        .author {
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .author-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .author-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Main Layout */
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 48px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Article Content */
+        .article-content {
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .article-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .article-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .article-section:hover::before {
+            opacity: 1;
+        }
+
+        .section-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .section-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 24px;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .toc-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 28px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toc-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        .tool-list {
+            list-style: none;
+        }
+
+        .tool-item {
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            cursor: default;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tool-item::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .tool-item:hover {
+            background: rgba(0, 212, 255, 0.08);
+            color: var(--text-primary);
+            padding-left: 20px;
+        }
+
+        .tool-item:hover::before {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 12px var(--accent-cyan);
+        }
+
+        .tool-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            min-width: 20px;
+        }
+
+        /* Decorative elements */
+        .grid-lines {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .article-section {
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .article-section:nth-child(1) { animation-delay: 0.3s; }
+        .article-section:nth-child(2) { animation-delay: 0.45s; }
+        .article-section:nth-child(3) { animation-delay: 0.6s; }
+        .article-section:nth-child(4) { animation-delay: 0.75s; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-card);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-lines"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="container">
+        <header>
+            <div class="badge">AI 工具评测</div>
+            <h1>AI文字生成图片工具评测</h1>
+            <p class="subtitle">深入对比主流AI绘图工具的核心能力与使用体验</p>
+            <div class="author">
+                <div class="author-avatar">凡</div>
+                <span class="author-name">AI凡人</span>
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            <main class="article-content">
+                <div class="article-section">
+                    <h2 class="section-title">评测背景</h2>
+                    <p class="section-text">
+                        随着人工智能技术的飞速发展，AI文字生成图片工具已经从概念走向实用。本文将对当前市场上最主流的几款AI绘图工具进行全方位评测，从生成速度、画面质量、提示词理解能力等多个维度进行深入对比，帮助创作者选择最适合自己需求的工具。
+                    </p>
+                </div>
+
+                <div class="article-section">
+                    <h2 class="section-title">评测维度</h2>
+                    <p class="section-text">
+                        我们采用标准化评测流程，对每款工具在相同提示词下的表现进行打分。评测维度包括：图像清晰度、色彩表现、细节还原度、创意理解能力、生成速度以及成本效益比。所有测试均在相同硬件条件下进行，确保结果公平公正。
+                    </p>
+                </div>
+
+                <div class="article-section">
+                    <h2 class="section-title">工具对比</h2>
+                    <p class="section-text">
+                        在本次评测中，我们选取了多款具有代表性的AI绘图工具进行横向对比。每款工具都有其独特的优势与不足，有的在写实风格上表现出色，有的则在创意抽象领域独具特色。通过实际测试，我们将呈现各工具的真实能力水平。
+                    </p>
+                </div>
+
+                <div class="article-section">
+                    <h2 class="section-title">总结与建议</h2>
+                    <p class="section-text">
+                        综合各项评测结果，不同工具适合不同的使用场景。专业设计师可能更注重画面质量与细节控制，而普通用户则可能更看重易用性与性价比。建议用户根据自身需求选择最合适的工具，并充分利用各平台的免费额度进行体验。
+                    </p>
+                </div>
+            </main>
+
+            <aside class="sidebar">
+                <div class="toc-card">
+                    <div class="toc-title">目录</div>
+                    <ul class="tool-list">
+                        <li class="tool-item">
+                            <span class="tool-number">01</span>
+                            Midjourney
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">02</span>
+                            DALL-E 3
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">03</span>
+                            Stable Diffusion
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">04</span>
+                            Adobe Firefly
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">05</span>
+                            穹鸣AI
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">06</span>
+                            通义万相
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">07</span>
+                            文心一格
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">08</span>
+                            堆友AI
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">09</span>
+                            秒画
+                        </li>
+                        <li class="tool-item">
+                            <span class="tool-number">10</span>
+                            6pen Art
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </div>
+</body>
+</html>
